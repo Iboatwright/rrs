@@ -4,11 +4,35 @@
 # then loop doing a scan each pass while the packets are being sent... 
 #     whether using ping or directly injecting packets, I dont care...
 # the output from the scan is appended to the logfile with a timestamp1
-LOG_FILE="rrs.log"
-RSSI_READ_INTERVAL=.2
-RSSI_READ_COUNT=10
-LOGGED_START_TIME="zero" # other option would be "now"
-START_TIME=$(date +%s%3N)
+
+# source shflags
+. ./lib/shflags
+
+# configure shflags
+# DEFINE_string 'dev' 'wlan0' 'device to read RSSI values from' 'd' 
+DEFINE_integer 'count' '100' 'number of RSSI values to record' 'c'
+DEFINE_integer 'seconds' '300' 'number of seconds to record' 's'
+DEFINE_integer 'msecs' '30000' 'number of milliseconds to record' 'm'
+DEFINE_integer 'interval' 500 'frequency in milliseconds to record RSSI values' 'i'
+DEFINE_string 'timestamp' 'zero' 'logged timestamp format: (zero | now | none )' 't'
+DEFINE_boolean 'quiet' false 'suppress message output to stdout' 'q'
+DEFINE_boolean 'overwrite' true 'overwrite old log files' 'o'
+DEFINE_boolean 'transmit' false 'transmit packets to the access point' 'x'
+DEFINE_integer 'packetsize' 8 'size of the packet to transmit +8 bytes for header' 'p'
+DEFINE_string 'file' 'rrs_log.csv' 'file to save the RSSI log results' 'f'
+
+# parse the command-line
+FLAGS "$@" || exit $?
+eval set -- "${FLAGS_ARGV}"
+
+#LOG_FILE=FLAGS_file
+RSSI_READ_INTERVAL=$(echo "scale=4; $FLAGS_interval/1000" | bc -l)
+#RSSI_READ_COUNT=FLAGS_count
+#LOGGED_START_TIME=FLAGS_timestamp 
+[[ $FLAGS_timestamp == "zero" ]] && START_TIME=$(date +%s%3N) || START_TIME=0
+[[ $FLAGS_quiet ]] && display_path="/dev/null" || display_path="/dev/fd/3"
+# echo $display_path; exit 0;
+
 
 # This parses specific to Raspbian 9 (stretch), the value reported for quality
 #		level is determined by the wireless nic's driver. If you want any other
@@ -16,37 +40,39 @@ START_TIME=$(date +%s%3N)
 #		class ($3 should be quality link and $5 quality noise).
 capture_rssi()
 {
-  exec 3>&1 1>>${LOG_FILE}
+  exec 3>&1 1>>${FLAGS_file}
   echo "time,RSSI"
-  for i in `seq 1 $RSSI_READ_COUNT`;
-  do
-    awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME))" 'NR==3 {print date "," $4}' /proc/net/wireless
-    sleep $RSSI_READ_INTERVAL
-  done
+	if [ ${FLAGS_timestamp} != "none" ]; then
+		for i in `seq 1 ${FLAGS_count}`;
+		do
+			awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME))" 'NR==3 {print date "," $4}'	/proc/net/wireless | tee $display_path
+			sleep $RSSI_READ_INTERVAL
+		done
+	else
+		for i in `seq 1 ${FLAGS_count}`;
+		do
+			awk -F ".[ ]+" 'NR==3 {print $4}' /proc/net/wireless | tee $display_path
+			sleep $RSSI_READ_INTERVAL
+		done
+	fi
 }
 
-write_log()
+init_log_file()
 {
-	while read text
-	do
-		LOGTIME=$(date +%s)
-		# check if logfile exists
-		if [ "$LOG_FILE" == "" ]; then
-			echo $LOGTIME": $text";
-		else
-			LOG=$LOG_FILE.$(date +%Y%m%d)
-			touch $LOG
-			if [ ! -f $LOG ]; then echo "Error! Cannot create the logfile $LOG."
-				exit 1; fi
-			echo $LOGTIME": $text" | tee -a $LOG;
-		fi
-	done
+	if [ -w "$FLAGS_file" ]; then
+		[[ $FLAGS_overwrite ]] && rm $FLAGS_file && touch $FLAGS_file || echo "Error! Cannot create the logfile $FLAGS_file." && exit 1 && fi
+	else
+		echo "Error! Cannot create the logfile $FLAGS_file."
+			exit 1; fi
+	fi
 }
 
-######
-# Main
-######
+########
+# Main #
+########
+init_log_file
 capture_rssi
+
 
 ###### old commands I might need ######
 #sudo iwlist wlxec1a595e181d scan | grep 'Signal level=' | awk -F'[=]' '{print $3}' | head -n1
