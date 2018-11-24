@@ -11,8 +11,8 @@
 # configure shflags
 # DEFINE_string 'dev' 'wlan0' 'device to read RSSI values from' 'd' 
 DEFINE_integer 'count' '100' 'number of RSSI values to record' 'c'
-DEFINE_integer 'seconds' '300' 'number of seconds to record' 's'
-DEFINE_integer 'msecs' '30000' 'number of milliseconds to record' 'm'
+DEFINE_integer 'seconds' '0' 'number of seconds to record' 's'
+DEFINE_integer 'msecs' '0' 'number of milliseconds to record' 'm'
 DEFINE_integer 'interval' 500 'frequency in milliseconds to record RSSI values' 'i'
 DEFINE_string 'timestamp' 'zero' 'logged timestamp format: (zero | now | none )' 't'
 DEFINE_boolean 'quiet' true 'suppress message output to stdout' 'q'
@@ -31,13 +31,10 @@ RSSI_READ_INTERVAL=$(echo "scale=4; $FLAGS_interval/1000" | bc -l)
 
 # sets the proper timestamp to prepend to each reading
 [[ $FLAGS_timestamp == "zero" ]] && START_TIME=$(date +%s%3N) || START_TIME=0
+DELTA=3 # small offset to adjust for START_TIME recording to first timestamp
 
 # toggles whether to print output to the screen as well as the log file
-if [ $FLAGS_quiet -eq $FLAGS_TRUE ]; then 
-	display_path="/dev/null"; 
-else 
-	display_path="/dev/fd/3";
-fi
+[[ $FLAGS_quiet -eq $FLAGS_TRUE ]] && display_path="/dev/null" ||	display_path="/dev/fd/3"
 
 # This parser is specific to Raspbian 9 (stretch), the value reported for quality
 #		level is determined by the wireless nic's driver. If you want any other
@@ -48,7 +45,8 @@ capture_rssi_by_counter()
 	if [ ${FLAGS_timestamp} != "none" ]; then
 		for i in `seq 1 ${FLAGS_count}`;
 		do
-			awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME))" 'NR==3 {print date "," $4}'	/proc/net/wireless | tee $display_path
+			awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME-DELTA))" 'NR==3 {print date "," $4}'	/proc/net/wireless | tee $display_path
+			DELTA=0
 			sleep $RSSI_READ_INTERVAL
 		done
 	else
@@ -63,6 +61,8 @@ capture_rssi_by_counter()
 
 capture_rssi_on_timer()
 {
+	END_SECONDS=$(echo "scale=4; $FLAGS_msecs/1000 + $FLAGS_seconds" | bc -1)
+	STOP_TIME=$(date +%s%3N -d "+$END_SECONDS")
 	if [ ${FLAGS_timestamp} != "none" ]; then
 		for i in `seq 1 ${FLAGS_count}`;
 		do
@@ -106,9 +106,11 @@ init_log_file()
 init_log_file
 
 # Counter or Timer?
-capture_rssi_by_counter
-#capture_rssi_on_timer
-
+if [ ($FLAGS_seconds + $FLAGS_msecs) -gt 0 ]; then
+	capture_rssi_on_timer
+else
+	capture_rssi_by_counter
+fi
 
 ###### old commands I might need ######
 #sudo iwlist wlxec1a595e181d scan | grep 'Signal level=' | awk -F'[=]' '{print $3}' | head -n1
