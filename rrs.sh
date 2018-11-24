@@ -17,6 +17,7 @@ DEFINE_integer 'interval' 500 'frequency in milliseconds to record RSSI values' 
 DEFINE_string 'timestamp' 'zero' 'logged timestamp format: (zero | now | none )' 't'
 DEFINE_boolean 'quiet' false 'suppress message output to stdout' 'q'
 DEFINE_boolean 'overwrite' true 'overwrite old log files' 'o'
+DEFINE_boolean 'headers' true 'prepend logfile with column headers' 'H'
 DEFINE_boolean 'transmit' false 'transmit packets to the access point' 'x'
 DEFINE_integer 'packetsize' 8 'size of the packet to transmit +8 bytes for header' 'p'
 DEFINE_string 'file' 'rrs_log.csv' 'file to save the RSSI log results' 'f'
@@ -41,7 +42,7 @@ RSSI_READ_INTERVAL=$(echo "scale=4; $FLAGS_interval/1000" | bc -l)
 capture_rssi()
 {
   exec 3>&1 1>>${FLAGS_file}
-  echo "time,RSSI"
+  [[ $FLAGS_headers -eq $FLAGS_TRUE ]] && echo "time,RSSI"
 	if [ ${FLAGS_timestamp} != "none" ]; then
 		for i in `seq 1 ${FLAGS_count}`;
 		do
@@ -60,10 +61,13 @@ capture_rssi()
 init_log_file()
 {
 	if [ -w "$FLAGS_file" ]; then
-		[[ $FLAGS_overwrite ]] && rm $FLAGS_file && touch $FLAGS_file || echo "Error! Cannot create the logfile $FLAGS_file." && exit 1 && fi
+		if [ $FLAGS_overwrite -eq $FLAGS_TRUE ]; then
+			rm $FLAGS_file
+			touch $FLAGS_file
+		fi
 	else
 		echo "Error! Cannot create the logfile $FLAGS_file."
-			exit 1; fi
+		exit 1;
 	fi
 }
 
