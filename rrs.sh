@@ -27,7 +27,7 @@ FLAGS "$@" || exit $?
 eval set -- "${FLAGS_ARGV}"
 
 # sets the delay between readings to seconds (with fractions)
-RSSI_READ_INTERVAL=$(echo "scale=4; $FLAGS_interval/1000" | bc -l)
+RSSI_READ_INTERVAL=$(echo "scale=4; $FLAGS_interval/1000" | bc -l)"s"
 
 # sets the proper timestamp to prepend to each reading
 [[ $FLAGS_timestamp == "zero" ]] && START_TIME=$(date +%s%3N) || START_TIME=0
@@ -106,7 +106,7 @@ init_log_file()
 init_log_file
 
 # Counter or Timer?
-if [ ($FLAGS_seconds + $FLAGS_msecs) -gt 0 ]; then
+if [ $((FLAGS_seconds + FLAGS_msecs)) -gt 0 ]; then
 	capture_rssi_on_timer
 else
 	capture_rssi_by_counter
