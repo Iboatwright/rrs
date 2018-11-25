@@ -58,19 +58,21 @@ capture_rssi_by_counter()
 	fi
 }
 
-
+##
+#	 This parser repeats until the current date is greater than or equal to the stop time.
+#
 capture_rssi_on_timer()
 {
 	END_SECONDS=$(echo "scale=4; $FLAGS_msecs/1000 + $FLAGS_seconds" | bc -1)
 	STOP_TIME=$(date +%s%3N -d "+$END_SECONDS")
 	if [ ${FLAGS_timestamp} != "none" ]; then
-		for i in `seq 1 ${FLAGS_count}`;
+		for i in `seq 1 ${FLAGS_count}`; # while (date -lt STOP_TIME);
 		do
 			awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME))" 'NR==3 {print date "," $4}'	/proc/net/wireless | tee $display_path
 			sleep $RSSI_READ_INTERVAL
 		done
 	else
-		for i in `seq 1 ${FLAGS_count}`;
+		for i in `seq 1 ${FLAGS_count}`; # while (date -lt STOP_TIME);
 		do
 			awk -F ".[ ]+" 'NR==3 {print $4}' /proc/net/wireless | tee $display_path
 			sleep $RSSI_READ_INTERVAL
@@ -100,6 +102,7 @@ init_log_file()
   [[ $FLAGS_headers -eq $FLAGS_TRUE ]] && echo "time,RSSI"
 }
 
+
 ########
 # Main #
 ########
@@ -114,5 +117,4 @@ fi
 
 ###### old commands I might need ######
 #sudo iwlist wlxec1a595e181d scan | grep 'Signal level=' | awk -F'[=]' '{print $3}' | head -n1
-
 #watch -n 1 "awk 'NR==3 {print \"WiFi Signal Strength = \" \$3 \"00 %\"}''' /proc/net/wireless"
