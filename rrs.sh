@@ -21,20 +21,20 @@ DEFINE_integer 'msecs' 0 'number of milliseconds to record' 'm'
 DEFINE_integer 'interval' 500 'frequency in milliseconds to record RSSI values' 'i'
 DEFINE_string 'timestamp' 'zero' 'logged timestamp format: (zero | now | none )' 't'
 DEFINE_boolean 'quiet' true 'suppress message output to stdout' 'q'
-DEFINE_boolean 'overwrite' true 'overwrite old log files' 'o'
+DEFINE_boolean 'overwrite' false 'overwrite old log files' 'o'
 DEFINE_boolean 'headers' true 'prepend logfile with column headers' 'H'
 DEFINE_boolean 'transmit' false 'transmit packets to the access point' 'x'
 DEFINE_integer 'packetsize' 8 'size of the packet to transmit +8 bytes for header' 'p'
-DEFINE_string 'file' 'rrs_log.csv' 'file to save the RSSI log results' 'f'
+DEFINE_string 'file' 'log.csv' 'file to save the RSSI log results' 'f'
 
+
+# parse the command-line
+FLAGS "$@" || exit $?
+eval set -- "${FLAGS_ARGV}"
 
 # assigns input from the cli to the corresponding flag variable
 setFlags()
 {
-	# parse the command-line
-	FLAGS "$@" || exit $?
-	eval set -- "${FLAGS_ARGV}"
-
 	# sets the delay between readings to seconds (with fractions)
 	RSSI_READ_INTERVAL=$(echo "scale=4; $FLAGS_interval/1000" | bc -l)"s"
 
@@ -44,6 +44,7 @@ setFlags()
 
 	# toggles whether to print output to the screen as well as the log file
 	[[ $FLAGS_quiet -eq $FLAGS_TRUE ]] && setDisplayPath "/dev/null" ||	setDisplayPath "/dev/fd/3"
+	echo $(getDisplayPath)
 }
 
 # set the (nonpersistant) display path
@@ -134,8 +135,9 @@ packetTransmitter()
 #		class ($3 should be quality link and $5 quality noise).
 parseRSSIValue()
 {
+	echo $(getDisplayPath)
 	if [[ $1 -eq true ]]; then
-		awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME-DELTA))" 'NR==3 {print date "," $4}'	/proc/net/wireless | tee $display_path
+		awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME-DELTA))" 'NR==3 {print date "," $4}'	/proc/net/wireless | tee getDisplayPath
 	else
 		awk -F ".[ ]+" 'NR==3 {print $4}' /proc/net/wireless | tee getDisplayPath
 	fi
@@ -263,7 +265,8 @@ initLogFile()
 ########
 setFlags
 initLogFile
-[[ $FLAGS_transmit -eq true ]] && packetTransmitter && sendPacket
+
+#[[ $FLAGS_transmit -eq true ]] && packetTransmitter && sendPacket
 # Counter or Timer?
 if [ $((FLAGS_seconds + FLAGS_msecs)) -gt 0 ]; then
 	readRSSIByTimer
