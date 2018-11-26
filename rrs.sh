@@ -44,7 +44,6 @@ setFlags()
 
 	# toggles whether to print output to the screen as well as the log file
 	[[ $FLAGS_quiet -eq $FLAGS_TRUE ]] && setDisplayPath "/dev/null" ||	setDisplayPath "/dev/fd/3"
-	echo $(getDisplayPath)
 }
 
 # set the (nonpersistant) display path
@@ -135,11 +134,11 @@ packetTransmitter()
 #		class ($3 should be quality link and $5 quality noise).
 parseRSSIValue()
 {
-	echo $(getDisplayPath)
+	#echo $(getDisplayPath)
 	if [[ $1 -eq true ]]; then
-		awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME-DELTA))" 'NR==3 {print date "," $4}'	/proc/net/wireless | tee getDisplayPath
+		awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME-DELTA))" 'NR==3 {print date "," $4}'	/proc/net/wireless | tee $(getDisplayPath)
 	else
-		awk -F ".[ ]+" 'NR==3 {print $4}' /proc/net/wireless | tee getDisplayPath
+		awk -F ".[ ]+" 'NR==3 {print $4}' /proc/net/wireless | tee $(getDisplayPath)
 	fi
 }
 
@@ -186,13 +185,13 @@ readRSSIByTimer()
 	if [ ${FLAGS_timestamp} != "none" ]; then
 		for i in `seq 1 ${FLAGS_count}`; # while (date -lt STOP_TIME);
 		do
-			awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME))" 'NR==3 {print date "," $4}'	/proc/net/wireless | writeToFile getDisplayPath
+			awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME))" 'NR==3 {print date "," $4}'	/proc/net/wireless | writeToFile $(getDisplayPath)
 			sleep $RSSI_READ_INTERVAL
 		done
 	else
 		for i in `seq 1 ${FLAGS_count}`; # while (date -lt STOP_TIME);
 		do
-			awk -F ".[ ]+" 'NR==3 {print $4}' /proc/net/wireless | writeToDisplay getDisplayPath
+			awk -F ".[ ]+" 'NR==3 {print $4}' /proc/net/wireless | writeToDisplay $(getDisplayPath)
 			sleep $RSSI_READ_INTERVAL
 		done
 	fi
