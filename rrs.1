@@ -1,0 +1,90 @@
+.TH rrs 1 "7 December 2018" "version 1.0.1"
+.SH NAME
+rrs - RSSI Reader Software
+.SH SYNOPSIS
+.B rrs [-h|--help]q
+.B rrs [-V|--version]
+
+.B rrs  [-c 
+.I count
+.B ]
+.B  [-s 
+.I seconds
+.B ]
+.B  [-m
+.I milliseconds
+.B ]
+.B  [-i 
+.I milliseconds
+.B ]
+.B  [-t 
+.I option
+.B ]
+.B  [--noquiet]
+.B  [--nooverwrite]
+.B  [--noheaders]
+.B  [-d 
+.I delimiter
+.B ]
+.B  [--notransmit]
+.B  [-p 
+.I size
+.B ]
+.B  [-f 
+.I file
+.B ]
+.SH DESCRIPTION
+.B rrs
+is a (fairly) highspeed IPv4 utility that reads a wireless network card's
+connection strength values. The Radio Signal Strength Indication values are
+read up to 10 times per second and saved to an output file (and optionally
+displayed to the console).
+.B rrs
+requires an established wireless network connection. The RSSI value is updated
+by the wireless nic when a packet is recieved from the wireless access point
+or router. To ensure consistent RSSI updates
+.B rrs
+[optionally] transmits ICMP ECHO_REQUEST datagrams via the
+.B ping
+utility.
+
+." disclaimer paragraph
+.PP
+Note that while this utility should work on other versions of linux, it has only
+been tested on Raspian 9 (Stretch) on a Raspberry Pi 3 B+ with the onboard
+wireless nic and Ubuntu 18.04 (Bionic Beaver) using a Belkin USB wireless nic.
+Each device manufacturer's implementation of RSSI reporting may vary, therefore
+the format and meaning of recorded values should be treated as inconsistent
+across devies.
+.B rrs
+polls the procfs file /proc/net/wireless for RSSI data. The implementation of
+procfs can vary between distros, which may render
+.B rrs
+incompatible with certain linux flavors.
+
+.SH EXAMPLES
+." add some examples
+
+.SH FILES
+.I ./lib/*
+.RS
+Support files needed for
+.B rrs
+to work.
+
+.SH OPTIONS
+.IP "-c --
+
+
+SH BUGS
+." do we have any bugs or just features?
+
+SH AUTHOR
+." that's me
+
+SH COPYRIGHT
+Copywrite (c) 2018 Ivan Boatwright
+
+rrs comes with NO WARRANTY, to the extent permitted by law.
+For information about the terms of redistribution,
+see the file named README in the rrs distribution.

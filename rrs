@@ -1,16 +1,13 @@
 #!/usr/bin/env /bin/bash
+version="1.0.2"
+copyright="Copywrite (c) 2018 Ivan Boatwright
 
-#command line parameters: "number of packets to send", "scan interval"
-# then loop doing a scan each pass while the packets are being sent... 
-#     whether using ping or directly injecting packets, I dont care...
-# the output from the scan is appended to the logfile with a timestamp1
+rrs comes with NO WARRANTY, to the extent permitted by law.
+For information about the terms of redistribution,
+see the file named README in the rrs distribution."
 
 # source shflags
 . ./lib/shflags
-
-# DEFINE_string 'dev' 'wlan0' 'device to read RSSI values from' 'd' 
-
-
 
 ######### UserInterface ############
 ####################################
@@ -22,23 +19,25 @@ DEFINE_integer 'msecs' 0 'number of milliseconds to record' 'm'
 DEFINE_integer 'interval' 500 'frequency in milliseconds to record RSSI values' 'i'
 DEFINE_string 'timestamp' 'zero' 'logged timestamp format: (zero | now | none )' 't'
 DEFINE_boolean 'quiet' true 'suppress message output to stdout' 'q'
-DEFINE_boolean 'overwrite' false 'overwrite old log files' 'o'
+DEFINE_boolean 'overwrite' true 'overwrite old log files' 'o'
 DEFINE_boolean 'headers' true 'prepend logfile with column headers' 'H'
 DEFINE_string 'delimiter' '\\t' 'delimiter to separate fields. Escape backslashes (\t -> \\\t)' 'd'
 DEFINE_boolean 'transmit' true 'transmit packets to the access point' 'x'
 DEFINE_integer 'packetsize' 8 'size of the packet to transmit +8 bytes for header' 'p'
 DEFINE_string 'file' 'log.csv' 'file to save the RSSI log results' 'f'
+DEFINE_boolean 'version' true 'display the current rrs version and exit' 'V'
 
 
 # parse the command-line
 FLAGS "$@" || exit $?
 eval set -- "${FLAGS_ARGV}"
-echo ">$FLAGS_delimiter<"
-exit 0
 
 # assigns input from the cli to the corresponding flag variable
 setFlags()
 {
+	# writes the current version to the console and exits
+	[[ $FLAGS_version -eq $FLAGS_TRUE ]] && echo "rrs v${version}" && echo "${copyright}" && exit 0
+
 	# sets the delay between readings to seconds (with fractions)
 	RSSI_READ_INTERVAL=$(echo "scale=4; $FLAGS_interval/1000" | bc -l)"s"
 
@@ -50,12 +49,14 @@ setFlags()
 	[[ $FLAGS_quiet -eq $FLAGS_TRUE ]] && setDisplayPath "/dev/null" ||	setDisplayPath "/dev/fd/3"
 
 	# delimiter -- convert friendly input to useful input
-	if [[ $FLAGS_delimiter != '\t' ]] then
+	if [[ $FLAGS_delimiter != '\t' ]]; then
 	case $FLAGS_delimiter in
 		tab) $FLAGS_delimiter='\t';;
 		space) $FLAGS_delimiter=' ';;
 		comma) $FLAGS_delimiter=',';;
 	esac
+	fi
+}
 
 # set the (nonpersistant) display path
 setDisplayPath()
@@ -100,6 +101,7 @@ printErrors()
 	fi
 }
 
+
 ########### PacketTransmitter #############
 ###########################################
 # Sends packets to the access point
@@ -137,6 +139,8 @@ packetTransmitter()
 	packetsize=$FLAGS_packetsize
 	destination=getAPIP
 }
+
+
 ########### RSSIParser #############
 ####################################
 # This parser is specific to Raspbian 9 (stretch), the value reported for quality
