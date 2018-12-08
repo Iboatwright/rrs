@@ -2,9 +2,14 @@
 .SH NAME
 rrs - RSSI Reader Software
 .SH SYNOPSIS
-.B rrs [-h|--help]q
-.B rrs [-V|--version]
-
+.B rrs -h
+.br
+.B rrs --help
+.br
+.B rrs -V
+.br
+.B rrs --version
+.br
 .B rrs  [-c 
 .I count
 .B ]
@@ -64,26 +69,122 @@ incompatible with certain linux flavors.
 
 .SH EXAMPLES
 ." add some examples
+.B rrs -h
+.RS
+Print all commandline options and their default values to the console.
+.RE
+.B rrs
+.RS
+Run rrs with defaul values to produce a logfile of RSSI values.
+.RE
+.B rrs -i 100 -c 10000 --noquiet | sudo feedgnuplot --stream .1 --xlen 100 
+.B "    --ymin -90 --ymax -10 --lines --xlabel 'Time' --ylabel 'RSSI'"
+.RS
+This example must be run in an X-Windows environment and requires feedgnuplot
+(https://github.com/dkogan/feedgnuplot). The ymin and ymax values here are for 
+Raspberry Pi 3 B+, adjust to your readings as necessary. The resulting output is
+a scrolling line graph of real-time RSSI value changes.
+.RE
 
 .SH FILES
-.I ./lib/*
+.I ./lib/
 .RS
 Support files needed for
 .B rrs
 to work.
 
 .SH OPTIONS
-.IP "-c --
+.TP
+.BI "-c, --count " count
+Record by count. Specifies the number of RSSI readings to take. This option takes precedence over
+.B --seconds
+or
+.BR --milliseconds .
+If
+.B --count 
+is specified, record by time options are ignored.
+.TP
+.BI "-s, --seconds " seconds
+Record by time. Specifies how many seconds to record RSSI readings for. This option combines with
+.B --milliseconds 
+additively. If
+.B --count
+is specified, record by time options are ignored.
+.TP
+.BI "-m, --milliseconds " milliseconds
+Record by time. Specifies how many milliseconds to record RSSI readings for. This option combines with
+.B --seconds 
+additively. If
+.B --count
+is specified, record by time options are ignored. The fastest RSSI values can be read is 100 ms.
+Any value lower than that is treated as 100 ms. 
+.TP
+.BI "-i, --interval " milliseconds
+Specifies the frequency of RSSI readings to take given in milliseconds. The fastest RSSI values can be
+read is 100 ms. Any value lower than that is treated as 100 ms.
+.TP
+.BI "-t, --timestamp " OPTION
+Specifies the format of the timestamp that prepends each RSSI reading.  Timestamps increment roughly
+equal to the
+.B --interval
+and is measured in milliseconds.
+.br
+    zero - Uses a timer starting at 0.
+    now  - Prints the local time for each reading.
+    none - No timestamp is added.
+.TP
+.B "-q, --[no]quiet "
+Suppress readings output to stdout. To have the reading displayed to the console as well as written to
+the log file use either 
+.BR --noquiet " or " --quiet
+.IR false .
+.TP
+.B "-o, --[no]overwrite "
+Overwrite existing log file if it has the same file name as specified (or default). If disabled log
+files will be appended to. To disable use
+.BR --nooverwrite " or " --overwrite
+.IR false .
+.TP
+.B "-H, --[no]headers "
+Write column headers as the first line written to the log file. To disable writing headers use
+.BR --noheaders " or " --headers
+.IR false .
+.TP
+.BI "-d, --delimiter " String
+Defines the column separator for each RSSI reading output. If the delimiter includes whitespace it must
+be surrounded by double quotes.
+.TP
+.B "-x, --[no]transmit "
+Transmit ICMP packets to the access point. To disable use
+.BR --notransmit " or " --transmit
+.IR false .
+.TP
+.BI "-p, --packetsize " Integer
+Specifies the padding size of transmitted ICMP datagram packets. The default is 8,
+which translates into 16 ICMP data bytes when combined with the 8 bytes of the 
+ICMP header data.
+.TP
+.BI "-f, --file " file
+Specifies the path and filename that RSSI values will be recorded to.
+.TP
+.B "-V, --version "
+Prints the current version and copyright statement.
 
-
-SH BUGS
+.SH BUGS
 ." do we have any bugs or just features?
+.B Known Bugs
+.RS
+The delimiter field can not process escape characters and will cause the program
+to fail. The wireless device name is currently hardcoded to wlan0. To change this
+edit the rrs script file.
+.RE
 
-SH AUTHOR
+.SH AUTHORS
 ." that's me
+Ivan Boatwright & Julieth Diaz
 
-SH COPYRIGHT
-Copywrite (c) 2018 Ivan Boatwright
+.SH COPYRIGHT
+Copyright (c) 2018 Ivan Boatwright
 
 rrs comes with NO WARRANTY, to the extent permitted by law.
 For information about the terms of redistribution,

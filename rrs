@@ -21,12 +21,13 @@ DEFINE_string 'timestamp' 'zero' 'logged timestamp format: (zero | now | none )'
 DEFINE_boolean 'quiet' true 'suppress message output to stdout' 'q'
 DEFINE_boolean 'overwrite' true 'overwrite old log files' 'o'
 DEFINE_boolean 'headers' true 'prepend logfile with column headers' 'H'
-DEFINE_string 'delimiter' '\\t' 'delimiter to separate fields. Escape backslashes (\t -> \\\t)' 'd'
+DEFINE_string 'delimiter' '\t' 'delimiter to separate fields. Escape backslashes (\t -> \\\t)' 'd'
 DEFINE_boolean 'transmit' true 'transmit packets to the access point' 'x'
 DEFINE_integer 'packetsize' 8 'size of the packet to transmit +8 bytes for header' 'p'
 DEFINE_string 'file' 'log.csv' 'file to save the RSSI log results' 'f'
-DEFINE_boolean 'version' true 'display the current rrs version and exit' 'V'
+DEFINE_boolean 'version' false 'display the current rrs version and exit' 'V'
 
+# TODO: if file = "-", then do not write to a file.
 
 # parse the command-line
 FLAGS "$@" || exit $?
@@ -54,6 +55,7 @@ setFlags()
 		tab) $FLAGS_delimiter='\t';;
 		space) $FLAGS_delimiter=' ';;
 		comma) $FLAGS_delimiter=',';;
+		*) $FLAGS_delimiter=',';;  # default
 	esac
 	fi
 }
@@ -137,7 +139,7 @@ packetTransmitter()
 	packetCount=$FLAGS_count
 	transmitInterval=$FLAGS_interval
 	packetsize=$FLAGS_packetsize
-	destination=getAPIP
+	destination=$(getAPIP)
 }
 
 
@@ -149,9 +151,8 @@ packetTransmitter()
 #		class ($3 should be quality link and $5 quality noise).
 parseRSSIValue()
 {
-	#echo $(getDisplayPath)
 	if [[ $1 -eq true ]]; then
-		awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME-DELTA))" 'NR==3 {print date "," $4}'	/proc/net/wireless | tee $(getDisplayPath)
+		awk -F ".[ ]+" -v date="$(($(date +%s%3N)-START_TIME-DELTA))" 'NR==3 {print date $4}'	/proc/net/wireless | tee $(getDisplayPath)
 	else
 		awk -F ".[ ]+" 'NR==3 {print $4}' /proc/net/wireless | tee $(getDisplayPath)
 	fi
@@ -282,8 +283,9 @@ initLogFile
 
 [[ $FLAGS_transmit -eq true ]] && packetTransmitter && sendPacket
 # Counter or Timer?
-if [ $((FLAGS_seconds + FLAGS_msecs)) -gt 0 ]; then
-	readRSSIByTimer
-else
+if [ $((FLAGS_seconds + FLAGS_msecs)) -eq 0 ]; then
 	readRSSIByCounter
+else
+	[[ $((FLAGS_seconds + FLAGS_msecs)) -lt 100 ]] && $FLAGS_seconds =0 && $FLAGS_msecs = 100
+	readRSSIByTimer
 fi
