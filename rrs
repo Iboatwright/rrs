@@ -15,6 +15,7 @@
 ######### UserInterface ############
 ####################################
 # configure shflags
+#DEFINE_string 'device' 'wlan0' 'wireless device to monitor' 'w'
 DEFINE_integer 'count' 100 'number of RSSI values to record' 'c'
 DEFINE_integer 'seconds' 0 'number of seconds to record' 's'
 DEFINE_integer 'msecs' 0 'number of milliseconds to record' 'm'
@@ -23,7 +24,8 @@ DEFINE_string 'timestamp' 'zero' 'logged timestamp format: (zero | now | none )'
 DEFINE_boolean 'quiet' true 'suppress message output to stdout' 'q'
 DEFINE_boolean 'overwrite' false 'overwrite old log files' 'o'
 DEFINE_boolean 'headers' true 'prepend logfile with column headers' 'H'
-DEFINE_boolean 'transmit' false 'transmit packets to the access point' 'x'
+DEFINE_string 'delimiter' '\\t' 'delimiter to separate fields. Escape backslashes (\t -> \\\t)' 'd'
+DEFINE_boolean 'transmit' true 'transmit packets to the access point' 'x'
 DEFINE_integer 'packetsize' 8 'size of the packet to transmit +8 bytes for header' 'p'
 DEFINE_string 'file' 'log.csv' 'file to save the RSSI log results' 'f'
 
@@ -31,6 +33,8 @@ DEFINE_string 'file' 'log.csv' 'file to save the RSSI log results' 'f'
 # parse the command-line
 FLAGS "$@" || exit $?
 eval set -- "${FLAGS_ARGV}"
+echo ">$FLAGS_delimiter<"
+exit 0
 
 # assigns input from the cli to the corresponding flag variable
 setFlags()
@@ -44,7 +48,14 @@ setFlags()
 
 	# toggles whether to print output to the screen as well as the log file
 	[[ $FLAGS_quiet -eq $FLAGS_TRUE ]] && setDisplayPath "/dev/null" ||	setDisplayPath "/dev/fd/3"
-}
+
+	# delimiter -- convert friendly input to useful input
+	if [[ $FLAGS_delimiter != '\t' ]] then
+	case $FLAGS_delimiter in
+		tab) $FLAGS_delimiter='\t';;
+		space) $FLAGS_delimiter=' ';;
+		comma) $FLAGS_delimiter=',';;
+	esac
 
 # set the (nonpersistant) display path
 setDisplayPath()
@@ -108,7 +119,7 @@ cancelTransmission()
 #  multiple adapters.)
 getDevName()
 {
-	echo "iw dev | awk '/Interface/ { print $2 }'"
+	echo $(iw dev | awk '/Interface/ { print $2 }')
 }
 
 # Gets the access point's IP address
@@ -265,14 +276,10 @@ initLogFile()
 setFlags
 initLogFile
 
-#[[ $FLAGS_transmit -eq true ]] && packetTransmitter && sendPacket
+[[ $FLAGS_transmit -eq true ]] && packetTransmitter && sendPacket
 # Counter or Timer?
 if [ $((FLAGS_seconds + FLAGS_msecs)) -gt 0 ]; then
 	readRSSIByTimer
 else
 	readRSSIByCounter
 fi
-
-###### old commands I might need ######
-#sudo iwlist wlxec1a595e181d scan | grep 'Signal level=' | awk -F'[=]' '{print $3}' | head -n1
-#watch -n 1 "awk 'NR==3 {print \"WiFi Signal Strength = \" \$3 \"00 %\"}''' /proc/net/wireless"
